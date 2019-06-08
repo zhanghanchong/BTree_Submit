@@ -45,18 +45,14 @@ namespace sjtu {
 			off_t pos_leaf;
 			void openfile() const {
 				if (fp_level++==0) fp=fopen(pos_BTree->path,"rb+");
-				if (!fp) fp=fopen(path,"w"),fclose(fp),fp=fopen(path,"rb+");
+				if (!fp) fp=fopen(pos_BTree->path,"w"),fclose(fp),fp=fopen(pos_BTree->path,"rb+");
 			}
 			void closefile() const {if (--fp_level==0) fclose(fp);}
 		public:
 			bool modify(const Value& value){
 				if (pos_leaf<0 || pos_leaf==(sizeof(Key)+sizeof(off_t)+sizeof(bool))*(pos_BTree->M<<1)) throw invalid_iterator();
-				Value tem;
 				openfile();
 				fseek(fp,pos_leaf,0);
-				fread(&tem,sizeof(Value),1,fp);
-				if (tem==value) {closefile();return false;}
-				fseek(fp,-sizeof(Value),1);
 				fwrite(&value,sizeof(Value),1,fp);
 				closefile();
 				return true;
@@ -93,6 +89,15 @@ namespace sjtu {
 				pos_leaf=tem;
 				return *this;
 			}
+			Value operator*() const {
+				if (pos_leaf<0 || pos_leaf==(sizeof(Key)+sizeof(off_t)+sizeof(bool))*(pos_BTree->M<<1)) throw invalid_iterator();
+				Value res;
+				openfile();
+				fseek(fp,pos_leaf,0);
+				fread(&res,sizeof(Value),1,fp);
+				closefile();
+				return res;
+			}
 			bool operator==(const iterator& rhs) const {return const_iterator(*this)==const_iterator(rhs);}
 			bool operator==(const const_iterator& rhs) const {return const_iterator(*this)==rhs;}
 			bool operator!=(const iterator& rhs) const {return !(*this==rhs);}
@@ -107,7 +112,7 @@ namespace sjtu {
 			off_t pos_leaf;
 			void openfile() const {
 				if (fp_level++==0) fp=fopen(pos_BTree->path,"rb+");
-				if (!fp) fp=fopen(path,"w"),fclose(fp),fp=fopen(path,"rb+");
+				if (!fp) fp=fopen(pos_BTree->path,"w"),fclose(fp),fp=fopen(pos_BTree->path,"rb+");
 			}
 			void closefile() const {if (--fp_level==0) fclose(fp);}
 		public:
@@ -143,6 +148,15 @@ namespace sjtu {
 				if (tem<0) throw invalid_iterator();
 				pos_leaf=tem;
 				return *this;
+			}
+			const Value operator*() const {
+				if (pos_leaf<0 || pos_leaf==(sizeof(Key)+sizeof(off_t)+sizeof(bool))*(pos_BTree->M<<1)) throw invalid_iterator();
+				Value res;
+				openfile();
+				fseek(fp,pos_leaf,0);
+				fread(&res,sizeof(Value),1,fp);
+				closefile();
+				return res;
 			}
 			bool operator==(const iterator& rhs) const {return *this==const_iterator(rhs);}
 			bool operator==(const const_iterator& rhs) const {
@@ -321,7 +335,7 @@ namespace sjtu {
 			return pair<iterator,OperationResult>(res,Success);
 		}
 		OperationResult erase(const Key& key) {
-		  openfile();
+			openfile();
 			size_t num;
 			fseek(fp,(sizeof(Key)+sizeof(off_t)+sizeof(bool))*(M<<1)+sizeof(Value)+(sizeof(off_t)<<1),0);
 			fread(&num,sizeof(size_t),1,fp);
